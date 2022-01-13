@@ -50,6 +50,7 @@ const char *known_extensions[] = {
     "cl_khr_subgroup_shuffle_relative",
     "cl_khr_subgroup_clustered_reduce",
     "cl_khr_extended_bit_ops",
+    "cl_khr_integer_dot_product",
     // API-only extensions after this point.  If you add above here, modify
     // first_API_extension below.
     "cl_khr_icd",
@@ -74,10 +75,14 @@ const char *known_extensions[] = {
     "cl_khr_pci_bus_info",
     "cl_khr_suggested_local_work_size",
     "cl_khr_spirv_linkonce_odr",
+    "cl_khr_semaphore",
+    "cl_khr_external_semaphore",
+    "cl_khr_external_semaphore_sync_fd",
+    "cl_khr_command_buffer",
 };
 
 size_t num_known_extensions = sizeof(known_extensions) / sizeof(char *);
-size_t first_API_extension = 28;
+size_t first_API_extension = 29;
 
 const char *known_embedded_extensions[] = {
     "cles_khr_int64",
