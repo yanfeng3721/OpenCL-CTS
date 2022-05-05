@@ -1398,22 +1398,6 @@ template <typename Ty, typename Fns, size_t TSIZE = 0> struct test
                            const char *kname, const char *src,
                            WorkGroupParams test_params)
     {
-        Fns::log_test(test_params, "");
-
-        int error = do_run(device, context, queue, num_elements, kname, src,
-                           test_params);
-
-        if (error == TEST_PASS)
-        {
-            Fns::log_test(test_params, " passed");
-        }
-        return error;
-    };
-    static test_status do_run(cl_device_id device, cl_context context,
-                              cl_command_queue queue, int num_elements,
-                              const char *kname, const char *src,
-                              WorkGroupParams test_params)
-    {
         size_t tmp;
         cl_int error;
         int subgroup_size, num_subgroups;
