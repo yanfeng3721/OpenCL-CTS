@@ -392,7 +392,6 @@ static const char* enqueue_flags_wait_work_group_simple[] =
     NL, "  size_t gid = get_group_id(0);"
     NL, "  size_t lid = get_local_id(0);"
     NL, ""
-    NL, "  res[tid] = 0;"
     NL, "  array[tid] = tid;"
     NL, ""
     NL, "  if(lid == 0)"
@@ -467,7 +466,6 @@ static const char* enqueue_flags_wait_work_group_event[] =
     NL, "  size_t gid = get_group_id(0);"
     NL, "  size_t lid = get_local_id(0);"
     NL, ""
-    NL, "  res[tid] = 0;"
     NL, "  array[tid] = tid;"
     NL, ""
     NL, "  if(lid == 0)"
@@ -553,7 +551,6 @@ static const char* enqueue_flags_wait_work_group_local[] =
     NL, "  size_t gid = get_group_id(0);"
     NL, "  size_t lid = get_local_id(0);"
     NL, ""
-    NL, "  res[tid] = 0;"
     NL, "  array[tid] = tid;"
     NL, ""
     NL, "  if(lid == 0)"
@@ -638,7 +635,6 @@ static const char* enqueue_flags_wait_work_group_event_local[] =
     NL, "  size_t gid = get_group_id(0);"
     NL, "  size_t lid  = get_local_id(0);"
     NL, ""
-    NL, "  res[tid] = 0;"
     NL, "  array[tid] = tid;"
     NL, ""
     NL, "  if(lid == 0)"
@@ -676,7 +672,7 @@ int test_enqueue_flags(cl_device_id device, cl_context context, cl_command_queue
     cl_uint i;
     cl_int err_ret, res = 0;
     clCommandQueueWrapper dev_queue;
-    cl_int kernel_results[MAX_GWS] = { -1 };
+    cl_int kernel_results[MAX_GWS] = { 0 };
     int buff[MAX_GWS * BITS_DEPTH] = { 0 };
 
     size_t ret_len;
