@@ -19,6 +19,12 @@
 #include <ctype.h>
 #include <string.h>
 
+#if INTEL_COLLAB
+// Minimum limit for OpFunctionCall actual arguments is 255 according to
+// https://www.khronos.org/registry/SPIR-V/specs/unified1/SPIRV.html#_universal_validation_rules
+const unsigned int SPIRVMinLimitForFuncArgSize = 255;
+#endif // INTEL_COLLAB
+
 const char *sample_single_param_kernel[] = {
     "__kernel void sample_test(__global int *src)\n"
     "{\n"
@@ -348,6 +354,10 @@ int test_min_max_read_image_args(cl_device_id deviceID, cl_context context,
                  (int)(maxParameterSize / deviceAddressSize));
         maxReadImages = (unsigned int)(maxParameterSize / deviceAddressSize);
     }
+#if INTEL_COLLAB
+    // Subtract 1 for arg __global float *result
+    maxReadImages = std::min(maxReadImages, SPIRVMinLimitForFuncArgSize - 1);
+#endif // INTEL_COLLAB
 
     /* Create a program with that many read args */
     programSrc = (char *)malloc(strlen(sample_read_image_kernel_pattern[0])
@@ -498,6 +508,9 @@ int test_min_max_write_image_args(cl_device_id deviceID, cl_context context,
                  (int)(maxParameterSize / sizeof(cl_mem)));
         maxWriteImages = (unsigned int)(maxParameterSize / sizeof(cl_mem));
     }
+#if INTEL_COLLAB
+    maxWriteImages = std::min(maxWriteImages, SPIRVMinLimitForFuncArgSize);
+#endif // INTEL_COLLAB
 
     /* Create a program with that many write args + 1 */
     programSrc = (char *)malloc(
@@ -1201,7 +1214,9 @@ int test_min_max_parameter_size(cl_device_id deviceID, cl_context context,
     char *programSrc;
     char *ptr;
     size_t numberExpected;
-    long numberOfIntParametersToTry;
+#if INTEL_COLLAB
+    unsigned int numberOfIntParametersToTry;
+#endif // INTEL_COLLAB
     char *argumentLine, *codeLines;
     void *data;
     cl_long long_result, expectedResult;
@@ -1230,12 +1245,21 @@ int test_min_max_parameter_size(cl_device_id deviceID, cl_context context,
     /* The embedded profile without cles_khr_int64 extension does not require
      * longs, so use ints */
     if (embeddedNoLong)
-        numberOfIntParametersToTry = numberExpected =
+#if INTEL_COLLAB
+        numberOfIntParametersToTry =
+#endif // INTEL_COLLAB
             (maxSize - sizeof(cl_mem)) / sizeof(cl_int);
     else
-        numberOfIntParametersToTry = numberExpected =
+#if INTEL_COLLAB
+        numberOfIntParametersToTry =
+#endif // INTEL_COLLAB
             (maxSize - sizeof(cl_mem)) / sizeof(cl_long);
 
+#if INTEL_COLLAB
+    // Subtract 1 for arg __global long *result
+    numberOfIntParametersToTry = numberExpected =
+        std::min(numberOfIntParametersToTry, SPIRVMinLimitForFuncArgSize) - 1;
+#endif // INTEL_COLLAB
     decrement = (size_t)(numberOfIntParametersToTry / 8);
     if (decrement < 1) decrement = 1;
     log_info("Reported max parameter size of %d bytes.\n", (int)maxSize);
@@ -1495,6 +1519,10 @@ int test_min_max_samplers(cl_device_id deviceID, cl_context context,
                  (int)(maxParameterSize / sizeof(cl_sampler)));
         maxSamplers = (unsigned int)(maxParameterSize / sizeof(cl_sampler));
     }
+#if INTEL_COLLAB
+    // Subtract 2 for arg read_only image2d_t src and __global int4 *dst
+    maxSamplers = std::min(maxSamplers, SPIRVMinLimitForFuncArgSize - 2);
+#endif // INTEL_COLLAB
 
     /* Create a kernel to test with */
     programSrc = (char *)malloc(
@@ -1516,7 +1544,6 @@ int test_min_max_samplers(cl_device_id deviceID, cl_context context,
         strcat(programSrc, samplerLine);
     }
     strcat(programSrc, sample_sampler_kernel_pattern[4]);
-
 
     error =
         create_single_kernel_helper(context, &program, &kernel, 1,
@@ -1811,7 +1838,10 @@ int test_min_max_constant_args(cl_device_id deviceID, cl_context context,
                  (int)(maxParameterSize / sizeof(cl_mem)));
         maxArgs = (unsigned int)(maxParameterSize / sizeof(cl_mem));
     }
-
+#if INTEL_COLLAB
+    // Subtract 1 for arg __global int *dst
+    maxArgs = std::min(maxArgs, SPIRVMinLimitForFuncArgSize - 1);
+#endif // INTEL_COLLAB
 
     if (maxArgs < (gIsEmbedded ? 4 : 8))
     {
