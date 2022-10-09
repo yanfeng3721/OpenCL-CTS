@@ -28,11 +28,28 @@ echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
 echo "Clone repositories"
 git clone https://github.com/KhronosGroup/OpenCL-Headers.git --depth 1
 git clone https://github.com/KhronosGroup/OpenCL-ICD-Loader.git --depth 1
+git clone https://github.com/KhronosGroup/Vulkan-Headers.git --depth 1
+git clone https://github.com/KhronosGroup/Vulkan-Loader.git --depth 1
 
 echo "Build ICD loader"
 pushd OpenCL-ICD-Loader
 cmake cmake -G "Unix Makefiles" -DOPENCL_ICD_LOADER_HEADERS_DIR=../OpenCL-Headers -DCMAKE_BUILD_TYPE=${build_type} .
 make -j ${jobs}
+popd
+
+echo "Build Vulkan-Loader"
+mkdir -p Vulkan-Loader/build
+pushd Vulkan-Loader/build
+python3 ../scripts/update_deps.py
+cmake .. -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE} \
+      -DBUILD_WSI_XLIB_SUPPORT=OFF \
+      -DBUILD_WSI_XCB_SUPPORT=OFF \
+      -DBUILD_WSI_WAYLAND_SUPPORT=OFF \
+      -DUSE_GAS=OFF \
+      -C helper.cmake ..
+cmake --build . -j2
 popd
 
 echo "Apply patch"
@@ -42,10 +59,11 @@ git apply drivers.gpu.validation.opencl-cts-patches/0002-Turn-off-stdout-bufferi
 echo "Build tests"
 mkdir -p Build
 pushd Build
-cmake -G "Unix Makefiles" -DCL_INCLUDE_DIR=OpenCL-Headers -DCL_LIB_DIR=OpenCL-ICD-Loader -DCMAKE_C_COMPILER=${c_compiler} -DCMAKE_CXX_COMPILER=${cxx_compiler} -DCMAKE_BUILD_TYPE=${build_type} -DOPENCL_LIBRARIES=OpenCL ${cmake_extra_params} ..
+cmake -G "Unix Makefiles" -DCL_INCLUDE_DIR=OpenCL-Headers -DCL_LIB_DIR=OpenCL-ICD-Loader -DCMAKE_C_COMPILER=${c_compiler} -DCMAKE_CXX_COMPILER=${cxx_compiler} -DCMAKE_BUILD_TYPE=${build_type} -DOPENCL_LIBRARIES=OpenCL -DVULKAN_INCLUDE_DIR=Vulkan-Headers/include/ -DVULKAN_LIB_DIR=Vulkan-Loader/build/loader/ ${cmake_extra_params} ..
 make -j ${jobs}
 popd
 
 echo "Build done"
 rm -rf OpenCL-*
 rm -rf drivers*
+rm -rf Vulkan-*

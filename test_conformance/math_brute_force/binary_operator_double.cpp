@@ -111,45 +111,41 @@ int BuildKernel(const char *operator_symbol, int vectorSize,
                        relaxedMode);
 }
 
-struct BuildKernelInfo
-{
-    cl_uint offset; // the first vector size to build
-    cl_uint kernel_count;
-    KernelMatrix &kernels;
-    cl_program *programs;
-    const char *operator_symbol;
-    bool relaxedMode; // Whether to build with -cl-fast-relaxed-math.
-};
-
 cl_int BuildKernelFn(cl_uint job_id, cl_uint thread_id UNUSED, void *p)
 {
     BuildKernelInfo *info = (BuildKernelInfo *)p;
-    cl_uint i = info->offset + job_id;
-    return BuildKernel(info->operator_symbol, i, info->kernel_count,
-                       info->kernels[i].data(), info->programs + i,
-                       info->relaxedMode);
+    cl_uint vectorSize = gMinVectorSizeIndex + job_id;
+    return BuildKernel(info->nameInCode, vectorSize, info->threadCount,
+                       info->kernels[vectorSize].data(),
+                       &(info->programs[vectorSize]), info->relaxedMode);
 }
 
 // Thread specific data for a worker thread
 struct ThreadInfo
 {
-    cl_mem inBuf; // input buffer for the thread
-    cl_mem inBuf2; // input buffer for the thread
-    cl_mem outBuf[VECTOR_SIZE_COUNT]; // output buffers for the thread
+    // Input and output buffers for the thread
+    clMemWrapper inBuf;
+    clMemWrapper inBuf2;
+    Buffers outBuf;
+
     float maxError; // max error value. Init to 0.
     double
         maxErrorValue; // position of the max error value (param 1).  Init to 0.
     double maxErrorValue2; // position of the max error value (param 2).  Init
                            // to 0.
-    MTdata d;
-    cl_command_queue tQueue; // per thread command queue to improve performance
+    MTdataHolder d;
+
+    // Per thread command queue to improve performance
+    clCommandQueueWrapper tQueue;
 };
 
 struct TestInfo
 {
     size_t subBufferSize; // Size of the sub-buffer in elements
     const Func *f; // A pointer to the function info
-    cl_program programs[VECTOR_SIZE_COUNT]; // programs for various vector sizes
+
+    // Programs for various vector sizes.
+    Programs programs;
 
     // Thread-specific kernels for each vector size:
     // k[vector_size][thread_id]
@@ -294,6 +290,7 @@ cl_int Test(cl_uint job_id, cl_uint thread_id, void *data)
     float ulps = job->ulps;
     dptr func = job->f->dfunc;
     int ftz = job->ftz;
+    bool relaxedMode = job->relaxedMode;
     MTdata d = tinfo->d;
     cl_int error;
     const char *name = job->f->name;
@@ -394,7 +391,8 @@ cl_int Test(cl_uint job_id, cl_uint thread_id, void *data)
         if ((error = clEnqueueUnmapMemObject(tinfo->tQueue, tinfo->outBuf[j],
                                              out[j], 0, NULL, NULL)))
         {
-            vlog_error("Error: clEnqueueMapBuffer failed! err: %d\n", error);
+            vlog_error("Error: clEnqueueUnmapMemObject failed! err: %d\n",
+                       error);
             goto exit;
         }
 
@@ -476,7 +474,7 @@ cl_int Test(cl_uint job_id, cl_uint thread_id, void *data)
                 float err = Bruteforce_Ulp_Error_Double(test, correct);
                 int fail = !(fabsf(err) <= ulps);
 
-                if (fail && ftz)
+                if (fail && (ftz || relaxedMode))
                 {
                     // retry per section 6.5.3.2
                     if (IsDoubleResultSubnormal(correct, ulps))
@@ -603,7 +601,7 @@ cl_int Test(cl_uint job_id, cl_uint thread_id, void *data)
     {
         if (gVerboseBruteForce)
         {
-            vlog("base:%14u step:%10u scale:%10zu buf_elements:%10u ulps:%5.3f "
+            vlog("base:%14u step:%10u scale:%10u buf_elements:%10zu ulps:%5.3f "
                  "ThreadCount:%2u\n",
                  base, job->step, job->scale, buffer_elements, job->ulps,
                  job->threadCount);
@@ -660,7 +658,7 @@ int TestFunc_Double_Double_Double_Operator(const Func *f, MTdata d,
         test_info.k[i].resize(test_info.threadCount, nullptr);
     }
 
-    test_info.tinfo.resize(test_info.threadCount, ThreadInfo{});
+    test_info.tinfo.resize(test_info.threadCount);
     for (cl_uint i = 0; i < test_info.threadCount; i++)
     {
         cl_buffer_region region = {
@@ -709,15 +707,14 @@ int TestFunc_Double_Double_Double_Operator(const Func *f, MTdata d,
             goto exit;
         }
 
-        test_info.tinfo[i].d = init_genrand(genrand_int32(d));
+        test_info.tinfo[i].d = MTdataHolder(genrand_int32(d));
     }
 
     // Init the kernels
     {
-        BuildKernelInfo build_info = {
-            gMinVectorSizeIndex, test_info.threadCount, test_info.k,
-            test_info.programs,  f->nameInCode,         relaxedMode
-        };
+        BuildKernelInfo build_info{ test_info.threadCount, test_info.k,
+                                    test_info.programs, f->nameInCode,
+                                    relaxedMode };
         if ((error = ThreadPool_Do(BuildKernelFn,
                                    gMaxVectorSizeIndex - gMinVectorSizeIndex,
                                    &build_info)))
@@ -756,21 +753,10 @@ exit:
     // Release
     for (auto i = gMinVectorSizeIndex; i < gMaxVectorSizeIndex; i++)
     {
-        clReleaseProgram(test_info.programs[i]);
         for (auto &kernel : test_info.k[i])
         {
             clReleaseKernel(kernel);
         }
-    }
-
-    for (auto &threadInfo : test_info.tinfo)
-    {
-        free_mtdata(threadInfo.d);
-        clReleaseMemObject(threadInfo.inBuf);
-        clReleaseMemObject(threadInfo.inBuf2);
-        for (auto j = gMinVectorSizeIndex; j < gMaxVectorSizeIndex; j++)
-            clReleaseMemObject(threadInfo.outBuf[j]);
-        clReleaseCommandQueue(threadInfo.tQueue);
     }
 
     return error;

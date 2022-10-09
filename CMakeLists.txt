@@ -57,6 +57,14 @@ else(CL_INCLUDE_DIR AND CL_LIB_DIR)
     message(FATAL_ERROR "Either install OpenCL or pass -DCL_INCLUDE_DIR and -DCL_LIB_DIR")
 endif(CL_INCLUDE_DIR AND CL_LIB_DIR)
 
+# VULKAN_INCLUDE_DIR - path to dir with Vulkan headers
+if(VULKAN_INCLUDE_DIR AND VULKAN_LIB_DIR)
+    link_directories(${VULKAN_LIB_DIR})
+else(CL_INCLUDE_DIR AND CL_LIB_DIR)
+    message(STATUS "Vulkan hasn't been found!")
+    message(FATAL_ERROR "Either install Vulkan or pass -DCL_INCLUDE_DIR and -DCL_LIB_DIR")
+endif(VULKAN_INCLUDE_DIR AND VULKAN_LIB_DIR)
+
 # CLConform_GL_LIBRARIES_DIR - path to OpenGL libraries
 if(GL_IS_SUPPORTED AND CLConform_GL_LIBRARIES_DIR)
     link_directories(${CLConform_GL_LIBRARIES_DIR})
@@ -89,6 +97,8 @@ macro(add_cxx_flag_if_supported flag)
 endmacro(add_cxx_flag_if_supported)
 
 if(CMAKE_COMPILER_IS_GNUCC OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?Clang")
+    add_cxx_flag_if_supported(-Wmisleading-indentation)
+    add_cxx_flag_if_supported(-Wunused-variable)
     add_cxx_flag_if_supported(-Wno-narrowing)
     add_cxx_flag_if_supported(-Wno-format)
     add_cxx_flag_if_supported(-Werror)
@@ -111,6 +121,17 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D__SSE__")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D__SSE__")
 endif()
+
+# Set a module's COMPILE_FLAGS if using gcc or clang.
+macro(set_gnulike_module_compile_flags flags)
+    if(CMAKE_COMPILER_IS_GNUCC OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?Clang")
+        SET_SOURCE_FILES_PROPERTIES(
+            ${${MODULE_NAME}_SOURCES}
+            PROPERTIES
+            COMPILE_FLAGS ${flags}
+        )
+    endif()
+endmacro(set_gnulike_module_compile_flags)
 
 if(MSVC)
     # Don't warn when using standard non-secure functions.
@@ -149,6 +170,7 @@ if(APPLE)
 endif(APPLE)
 
 include_directories(SYSTEM ${CL_INCLUDE_DIR})
+include_directories(SYSTEM ${VULKAN_INCLUDE_DIR})
 include_directories(${CLConform_SOURCE_DIR}/test_common/harness
                     ${CLConform_SOURCE_DIR}/test_common/gles
                     ${CLConform_SOURCE_DIR}/test_common/gl
