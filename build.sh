@@ -6,24 +6,24 @@ os=$1
 build_type=$2
 jobs=$3
 cmake_extra_params="-DGL_IS_SUPPORTED=OFF"
-compiler="gcc"
+c_compiler="gcc"
+cxx_compiler="g++"
 
 if [ ${build_type} != "debug" ]; then
     build_type="release"
     build_opt="/MD"
-else 
+else
     build_type="debug"
     build_opt="/MDd"
 fi
 
 if [ ${os} = win ]; then
-    compiler="icl"
+    c_compiler="icl"
+    cxx_compiler="icl"
     cmake_extra_params="-DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
-else 
-    compiler="gcc"
 fi
 
-echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${compiler}"
+echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
 
 echo "Clone repositories"
 git clone https://github.com/KhronosGroup/OpenCL-Headers.git --depth 1
@@ -42,7 +42,7 @@ git apply drivers.gpu.validation.opencl-cts-patches/0002-Turn-off-stdout-bufferi
 echo "Build tests"
 mkdir -p Build
 pushd Build
-cmake -G "Unix Makefiles" -DCL_INCLUDE_DIR=OpenCL-Headers -DCL_LIB_DIR=OpenCL-ICD-Loader -DCMAKE_C_COMPILER=${compiler} -DCMAKE_CXX_COMPILER=${compiler} -DCMAKE_BUILD_TYPE=${build_type} -DOPENCL_LIBRARIES=OpenCL ${cmake_extra_params} ..
+cmake -G "Unix Makefiles" -DCL_INCLUDE_DIR=OpenCL-Headers -DCL_LIB_DIR=OpenCL-ICD-Loader -DCMAKE_C_COMPILER=${c_compiler} -DCMAKE_CXX_COMPILER=${cxx_compiler} -DCMAKE_BUILD_TYPE=${build_type} -DOPENCL_LIBRARIES=OpenCL ${cmake_extra_params} ..
 make -j ${jobs}
 popd
 
