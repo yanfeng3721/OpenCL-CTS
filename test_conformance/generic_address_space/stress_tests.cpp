@@ -23,6 +23,12 @@
 #include <algorithm>
 #include <sstream>
 
+#if INTEL_COLLAB
+// Minimum limit for OpFunctionCall actual arguments is 255 according to
+// https://www.khronos.org/registry/SPIR-V/specs/unified1/SPIRV.html#_universal_validation_rules
+const size_t SPIRVMinLimitForFuncArgSize = 255;
+#endif // INTEL_COLLAB
+
 class CStressTest : public CTest {
 public:
     CStressTest(const std::vector<std::string>& kernel) : CTest(), _kernels(kernel) {
@@ -108,6 +114,10 @@ int test_max_number_of_params(cl_device_id deviceID, cl_context context, cl_comm
     test_error(error, "clGetDeviceInfo failed");
 
     size_t maxParams = deviceMaxParameterSize / (deviceAddressBits / 8);
+#if INTEL_COLLAB
+    // Subtract 1 for int *ptr0
+    maxParams = std::min(maxParams, SPIRVMinLimitForFuncArgSize - 1);
+#endif // INTEL_COLLAB
 
     const std::string KERNEL_FUNCTION_TEMPLATE[] = {
         common::CONFORMANCE_VERIFY_FENCE +
