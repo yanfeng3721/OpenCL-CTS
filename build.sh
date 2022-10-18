@@ -54,6 +54,9 @@ popd
 
 echo "Apply patch"
 git clone https://github.com/intel-innersource/drivers.gpu.validation.opencl-cts-patches.git
+pushd drivers.gpu.validation.opencl-cts-patches
+git checkout 00dc8957c4455c9cb018d60994f09f5bb9ce0746
+popd
 git apply drivers.gpu.validation.opencl-cts-patches/0002-Turn-off-stdout-buffering-no-compatibility.patch
 
 echo "Build tests"
