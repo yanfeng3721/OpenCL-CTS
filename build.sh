@@ -10,7 +10,7 @@ c_compiler="gcc"
 cxx_compiler="g++"
 
 if [ ${build_type} != "debug" ]; then
-    build_type="release"
+    build_type="Release"
     build_opt="/MD"
 else
     build_type="debug"
@@ -57,7 +57,7 @@ git clone https://github.com/intel-innersource/drivers.gpu.validation.opencl-cts
 pushd drivers.gpu.validation.opencl-cts-patches
 git checkout 00dc8957c4455c9cb018d60994f09f5bb9ce0746
 popd
-git apply drivers.gpu.validation.opencl-cts-patches/0002-Turn-off-stdout-buffering-no-compatibility.patch
+#git apply drivers.gpu.validation.opencl-cts-patches/0002-Turn-off-stdout-buffering-no-compatibility.patch
 
 echo "Build tests"
 mkdir -p Build

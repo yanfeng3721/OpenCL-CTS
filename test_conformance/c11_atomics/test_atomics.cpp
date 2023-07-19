@@ -2393,7 +2393,6 @@ class CBasicTestFlag
     static const HostDataType CRITICAL_SECTION_NOT_VISITED = 1000000000;
 
 public:
-
     using CBasicTestMemOrderScope<HostAtomicType, HostDataType>::StartValue;
     using CBasicTestMemOrderScope<HostAtomicType, HostDataType>::OldValueCheck;
     using CBasicTestMemOrderScope<HostAtomicType, HostDataType>::MemoryOrder;
@@ -2915,7 +2914,8 @@ public:
                 + "-1);\n"
                   "  if(hisAtomicValue != hisValue)\n"
                   "  { // fail\n"
-                  "    atomic_store(&destMemory[myId], myValue-1);\n";
+                  "    atomic_store_explicit(&destMemory[myId], myValue-1,"
+                  " memory_order_relaxed, memory_scope_work_group);\n";
             if (LocalMemory())
                 program += "    hisId = "
                            "(hisId+get_local_size(0)-1)%get_local_size(0);\n";
@@ -3134,7 +3134,7 @@ public:
                                   NumNonAtomicVariablesPerThread() - 1);
                         log_error("ERROR: Thread #%u observed invalid values "
                                   "in other thread's variables\n",
-                                  workOffset + i, myValue);
+                                  workOffset + i);
                         correct = false;
                         return true;
                     }

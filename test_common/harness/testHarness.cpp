@@ -20,9 +20,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cassert>
+#include <deque>
+#include <mutex>
 #include <stdexcept>
+#include <thread>
 #include <vector>
-#include "threadTesting.h"
 #include "errorHelpers.h"
 #include "kernelHelpers.h"
 #include "fpcontrol.h"
@@ -60,6 +62,54 @@ bool gCoreILProgram = true;
 
 #define DEFAULT_NUM_ELEMENTS 0x4000
 
+static int saveResultsToJson(const char *suiteName, test_definition testList[],
+                             unsigned char selectedTestList[],
+                             test_status resultTestList[], int testNum)
+{
+    char *fileName = getenv("CL_CONFORMANCE_RESULTS_FILENAME");
+    if (fileName == nullptr)
+    {
+        return EXIT_SUCCESS;
+    }
+
+    FILE *file = fopen(fileName, "w");
+    if (NULL == file)
+    {
+        log_error("ERROR: Failed to open '%s' for writing results.\n",
+                  fileName);
+        return EXIT_FAILURE;
+    }
+
+    const char *save_map[] = { "success", "failure" };
+    const char *result_map[] = { "pass", "fail", "skip" };
+    const char *linebreak[] = { "", ",\n" };
+    int add_linebreak = 0;
+
+    fprintf(file, "{\n");
+    fprintf(file, "\t\"cmd\": \"%s\",\n", suiteName);
+    fprintf(file, "\t\"results\": {\n");
+
+    for (int i = 0; i < testNum; ++i)
+    {
+        if (selectedTestList[i])
+        {
+            fprintf(file, "%s\t\t\"%s\": \"%s\"", linebreak[add_linebreak],
+                    testList[i].name, result_map[(int)resultTestList[i]]);
+            add_linebreak = 1;
+        }
+    }
+    fprintf(file, "\n");
+
+    fprintf(file, "\t}\n");
+    fprintf(file, "}\n");
+
+    int ret = fclose(file) ? EXIT_FAILURE : EXIT_SUCCESS;
+
+    log_info("Saving results to %s: %s!\n", fileName, save_map[ret]);
+
+    return ret;
+}
+
 int runTestHarness(int argc, const char *argv[], int testNum,
                    test_definition testList[], int forceNoContextCreation,
                    cl_command_queue_properties queueProps)
@@ -68,19 +118,28 @@ int runTestHarness(int argc, const char *argv[], int testNum,
                                    forceNoContextCreation, queueProps, NULL);
 }
 
-int skip_init_info(int count)
+int suite_did_not_pass_init(const char *suiteName, test_status status,
+                            int testNum, test_definition testList[])
 {
-    log_info("Test skipped while initialization\n");
-    log_info("SKIPPED %d of %d tests.\n", count, count);
-    return EXIT_SUCCESS;
+    std::vector<unsigned char> selectedTestList(testNum, 1);
+    std::vector<test_status> resultTestList(testNum, status);
+
+    int ret = saveResultsToJson(suiteName, testList, selectedTestList.data(),
+                                resultTestList.data(), testNum);
+
+    log_info("Test %s while initialization\n",
+             status == TEST_SKIP ? "skipped" : "failed");
+    log_info("%s %d of %d tests.\n", status == TEST_SKIP ? "SKIPPED" : "FAILED",
+             testNum, testNum);
+
+    if (ret != EXIT_SUCCESS)
+    {
+        return ret;
+    }
+
+    return status == TEST_SKIP ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-int fail_init_info(int count)
-{
-    log_info("Test failed while initialization\n");
-    log_info("FAILED %d of %d tests.\n", count, count);
-    return EXIT_FAILURE;
-}
 void version_expected_info(const char *test_name, const char *api_name,
                            const char *expected_version,
                            const char *device_version)
@@ -470,6 +529,7 @@ int runTestHarnessWithCheck(int argc, const char *argv[], int testNum,
         log_error("Invalid device address bit size returned by device.\n");
         return EXIT_FAILURE;
     }
+    const char *suiteName = argv[0];
     if (gCompilationMode == kSpir_v)
     {
         test_status spirv_readiness = check_spirv_compilation_readiness(device);
@@ -478,9 +538,15 @@ int runTestHarnessWithCheck(int argc, const char *argv[], int testNum,
             switch (spirv_readiness)
             {
                 case TEST_PASS: break;
-                case TEST_FAIL: return fail_init_info(testNum);
-                case TEST_SKIP: return skip_init_info(testNum);
-                case TEST_SKIPPED_ITSELF: return skip_init_info(testNum);
+                case TEST_FAIL:
+                    return suite_did_not_pass_init(suiteName, TEST_FAIL,
+                                                   testNum, testList);
+                case TEST_SKIP:
+                    return suite_did_not_pass_init(suiteName, TEST_SKIP,
+                                                   testNum, testList);
+                case TEST_SKIPPED_ITSELF:
+                    return suite_did_not_pass_init(suiteName, TEST_SKIP,
+                                                   testNum, testList);
             }
         }
     }
@@ -492,9 +558,15 @@ int runTestHarnessWithCheck(int argc, const char *argv[], int testNum,
         switch (status)
         {
             case TEST_PASS: break;
-            case TEST_FAIL: return fail_init_info(testNum);
-            case TEST_SKIP: return skip_init_info(testNum);
-            case TEST_SKIPPED_ITSELF: return skip_init_info(testNum);
+            case TEST_FAIL:
+                return suite_did_not_pass_init(suiteName, TEST_FAIL, testNum,
+                                               testList);
+            case TEST_SKIP:
+                return suite_did_not_pass_init(suiteName, TEST_SKIP, testNum,
+                                               testList);
+            case TEST_SKIPPED_ITSELF:
+                return suite_did_not_pass_init(suiteName, TEST_SKIP, testNum,
+                                               testList);
         }
     }
 
@@ -514,10 +586,12 @@ int runTestHarnessWithCheck(int argc, const char *argv[], int testNum,
     FPU_mode_type oldMode;
     DisableFTZ(&oldMode);
 #endif
+    extern unsigned gNumWorkerThreads;
+    test_harness_config config = { forceNoContextCreation, num_elements,
+                                   queueProps, gNumWorkerThreads };
 
     int error = parseAndCallCommandLineTests(argc, argv, device, testNum,
-                                             testList, forceNoContextCreation,
-                                             queueProps, num_elements);
+                                             testList, config);
 
 #if defined(__APPLE__) && defined(__arm__)
     // Restore the old FP mode before leaving.
@@ -574,49 +648,6 @@ static int find_matching_tests(test_definition testList[],
     return EXIT_SUCCESS;
 }
 
-static int saveResultsToJson(const char *fileName, const char *suiteName,
-                             test_definition testList[],
-                             unsigned char selectedTestList[],
-                             test_status resultTestList[], int testNum)
-{
-    FILE *file = fopen(fileName, "w");
-    if (NULL == file)
-    {
-        log_error("ERROR: Failed to open '%s' for writing results.\n",
-                  fileName);
-        return EXIT_FAILURE;
-    }
-
-    const char *save_map[] = { "success", "failure" };
-    const char *result_map[] = { "pass", "fail", "skip" };
-    const char *linebreak[] = { "", ",\n" };
-    int add_linebreak = 0;
-
-    fprintf(file, "{\n");
-    fprintf(file, "\t\"cmd\": \"%s\",\n", suiteName);
-    fprintf(file, "\t\"results\": {\n");
-
-    for (int i = 0; i < testNum; ++i)
-    {
-        if (selectedTestList[i])
-        {
-            fprintf(file, "%s\t\t\"%s\": \"%s\"", linebreak[add_linebreak],
-                    testList[i].name, result_map[(int)resultTestList[i]]);
-            add_linebreak = 1;
-        }
-    }
-    fprintf(file, "\n");
-
-    fprintf(file, "\t}\n");
-    fprintf(file, "}\n");
-
-    int ret = fclose(file) ? 1 : 0;
-
-    log_info("Saving results to %s: %s!\n", fileName, save_map[ret]);
-
-    return ret;
-}
-
 static void print_results(int failed, int count, const char *name)
 {
     if (count < failed)
@@ -651,14 +682,11 @@ static void print_results(int failed, int count, const char *name)
 int parseAndCallCommandLineTests(int argc, const char *argv[],
                                  cl_device_id device, int testNum,
                                  test_definition testList[],
-                                 int forceNoContextCreation,
-                                 cl_command_queue_properties queueProps,
-                                 int num_elements)
+                                 const test_harness_config &config)
 {
     int ret = EXIT_SUCCESS;
 
     unsigned char *selectedTestList = (unsigned char *)calloc(testNum, 1);
-    test_status *resultTestList = NULL;
 
     if (argc == 1)
     {
@@ -697,24 +725,18 @@ int parseAndCallCommandLineTests(int argc, const char *argv[],
 
     if (ret == EXIT_SUCCESS)
     {
-        resultTestList =
-            (test_status *)calloc(testNum, sizeof(*resultTestList));
+        std::vector<test_status> resultTestList(testNum, TEST_PASS);
 
-        callTestFunctions(testList, selectedTestList, resultTestList, testNum,
-                          device, forceNoContextCreation, num_elements,
-                          queueProps);
+        callTestFunctions(testList, selectedTestList, resultTestList.data(),
+                          testNum, device, config);
 
         print_results(gFailCount, gTestCount, "sub-test");
         print_results(gTestsFailed, gTestsFailed + gTestsPassed, "test");
 
-        char *filename = getenv("CL_CONFORMANCE_RESULTS_FILENAME");
-        if (filename != NULL)
-        {
-            ret = saveResultsToJson(filename, argv[0], testList,
-                                    selectedTestList, resultTestList, testNum);
-        }
+        ret = saveResultsToJson(argv[0], testList, selectedTestList,
+                                resultTestList.data(), testNum);
 
-        if (std::any_of(resultTestList, resultTestList + testNum,
+        if (std::any_of(resultTestList.begin(), resultTestList.end(),
                         [](test_status result) {
                             switch (result)
                             {
@@ -730,26 +752,101 @@ int parseAndCallCommandLineTests(int argc, const char *argv[],
     }
 
     free(selectedTestList);
-    free(resultTestList);
 
     return ret;
+}
+
+struct test_harness_state
+{
+    test_definition *tests;
+    test_status *results;
+    cl_device_id device;
+    test_harness_config config;
+};
+
+static std::deque<int> gTestQueue;
+static std::mutex gTestStateMutex;
+
+void test_function_runner(test_harness_state *state)
+{
+    int testID;
+    test_definition test;
+    while (true)
+    {
+        // Attempt to get a test
+        {
+            std::lock_guard<std::mutex> lock(gTestStateMutex);
+
+            // The queue is empty, we're done
+            if (gTestQueue.size() == 0)
+            {
+                return;
+            }
+
+            // Get the test at the front of the queue
+            testID = gTestQueue.front();
+            gTestQueue.pop_front();
+            test = state->tests[testID];
+        }
+
+        // Execute test
+        auto status =
+            callSingleTestFunction(test, state->device, state->config);
+
+        // Store result
+        {
+            std::lock_guard<std::mutex> lock(gTestStateMutex);
+            state->results[testID] = status;
+        }
+    }
 }
 
 void callTestFunctions(test_definition testList[],
                        unsigned char selectedTestList[],
                        test_status resultTestList[], int testNum,
-                       cl_device_id deviceToUse, int forceNoContextCreation,
-                       int numElementsToUse,
-                       cl_command_queue_properties queueProps)
+                       cl_device_id deviceToUse,
+                       const test_harness_config &config)
 {
-    for (int i = 0; i < testNum; ++i)
+    // Execute tests serially
+    if (config.numWorkerThreads == 0)
     {
-        if (selectedTestList[i])
+        for (int i = 0; i < testNum; ++i)
         {
-            resultTestList[i] = callSingleTestFunction(
-                testList[i], deviceToUse, forceNoContextCreation,
-                numElementsToUse, queueProps);
+            if (selectedTestList[i])
+            {
+                resultTestList[i] =
+                    callSingleTestFunction(testList[i], deviceToUse, config);
+            }
         }
+        // Execute tests in parallel with the specified number of worker threads
+    }
+    else
+    {
+        // Queue all tests that need to run
+        for (int i = 0; i < testNum; ++i)
+        {
+            if (selectedTestList[i])
+            {
+                gTestQueue.push_back(i);
+            }
+        }
+
+        // Spawn thread pool
+        std::vector<std::thread *> threads;
+        test_harness_state state = { testList, resultTestList, deviceToUse,
+                                     config };
+        for (int i = 0; i < config.numWorkerThreads; i++)
+        {
+            log_info("Spawning worker thread %i\n", i);
+            threads.push_back(new std::thread(test_function_runner, &state));
+        }
+
+        // Wait for all threads to complete
+        for (auto th : threads)
+        {
+            th->join();
+        }
+        assert(gTestQueue.size() == 0);
     }
 }
 
@@ -762,9 +859,7 @@ void CL_CALLBACK notify_callback(const char *errinfo, const void *private_info,
 // Actual function execution
 test_status callSingleTestFunction(test_definition test,
                                    cl_device_id deviceToUse,
-                                   int forceNoContextCreation,
-                                   int numElementsToUse,
-                                   const cl_queue_properties queueProps)
+                                   const test_harness_config &config)
 {
     test_status status;
     cl_int error;
@@ -792,27 +887,30 @@ test_status callSingleTestFunction(test_definition test,
     }
 
     /* Create a context to work with, unless we're told not to */
-    if (!forceNoContextCreation)
+    if (!config.forceNoContextCreation)
     {
         context = clCreateContext(NULL, 1, &deviceToUse, notify_callback, NULL,
                                   &error);
         if (!context)
         {
             print_error(error, "Unable to create testing context");
+            gFailCount++;
+            gTestsFailed++;
             return TEST_FAIL;
         }
 
         if (device_version < Version(2, 0))
         {
-            queue =
-                clCreateCommandQueue(context, deviceToUse, queueProps, &error);
+            queue = clCreateCommandQueue(context, deviceToUse,
+                                         config.queueProps, &error);
         }
         else
         {
             const cl_command_queue_properties cmd_queueProps =
-                (queueProps) ? CL_QUEUE_PROPERTIES : 0;
-            cl_command_queue_properties queueCreateProps[] = { cmd_queueProps,
-                                                               queueProps, 0 };
+                (config.queueProps) ? CL_QUEUE_PROPERTIES : 0;
+            cl_command_queue_properties queueCreateProps[] = {
+                cmd_queueProps, config.queueProps, 0
+            };
             queue = clCreateCommandQueueWithProperties(
                 context, deviceToUse, &queueCreateProps[0], &error);
         }
@@ -821,6 +919,8 @@ test_status callSingleTestFunction(test_definition test,
         {
             print_error(error, "Unable to create testing command queue");
             clReleaseContext(context);
+            gFailCount++;
+            gTestsFailed++;
             return TEST_FAIL;
         }
     }
@@ -835,7 +935,8 @@ test_status callSingleTestFunction(test_definition test,
     }
     else
     {
-        int ret = test.func(deviceToUse, context, queue, numElementsToUse);
+        int ret =
+            test.func(deviceToUse, context, queue, config.numElementsToUse);
         if (ret == TEST_SKIPPED_ITSELF)
         {
             /* Tests can also let us know they're not supported by the
@@ -862,12 +963,14 @@ test_status callSingleTestFunction(test_definition test,
     }
 
     /* Release the context */
-    if (!forceNoContextCreation)
+    if (!config.forceNoContextCreation)
     {
         int error = clFinish(queue);
         if (error)
         {
             log_error("clFinish failed: %s\n", IGetErrorString(error));
+            gFailCount++;
+            gTestsFailed++;
             status = TEST_FAIL;
         }
         clReleaseCommandQueue(queue);
@@ -1178,7 +1281,7 @@ cl_platform_id getPlatformFromDevice(cl_device_id deviceID)
 
 void PrintArch(void)
 {
-    vlog("sizeof( void*) = %ld\n", sizeof(void *));
+    vlog("sizeof( void*) = %zu\n", sizeof(void *));
 #if defined(__ppc__)
     vlog("ARCH:\tppc\n");
 #elif defined(__ppc64__)

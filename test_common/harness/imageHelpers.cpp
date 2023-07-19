@@ -23,6 +23,7 @@
 #include <malloc.h>
 #endif
 #include <algorithm>
+#include <cinttypes>
 #include <iterator>
 #if !defined(_WIN32)
 #include <cmath>
@@ -421,7 +422,7 @@ void print_first_pixel_difference_error(size_t where, const char *sourcePixel,
               (int)thirdDim, (int)imageInfo->rowPitch,
               (int)imageInfo->rowPitch
                   - (int)imageInfo->width * (int)pixel_size);
-    log_error("Failed at column: %ld   ", where);
+    log_error("Failed at column: %zu   ", where);
 
     switch (pixel_size)
     {
@@ -454,7 +455,7 @@ void print_first_pixel_difference_error(size_t where, const char *sourcePixel,
                 ((cl_ushort *)destPixel)[1], ((cl_ushort *)destPixel)[2]);
             break;
         case 8:
-            log_error("*0x%16.16llx vs. 0x%16.16llx\n",
+            log_error("*0x%16.16" PRIx64 " vs. 0x%16.16" PRIx64 "\n",
                       ((cl_ulong *)sourcePixel)[0], ((cl_ulong *)destPixel)[0]);
             break;
         case 12:
@@ -473,7 +474,7 @@ void print_first_pixel_difference_error(size_t where, const char *sourcePixel,
                       ((cl_uint *)destPixel)[2], ((cl_uint *)destPixel)[3]);
             break;
         default:
-            log_error("Don't know how to print pixel size of %ld\n",
+            log_error("Don't know how to print pixel size of %zu\n",
                       pixel_size);
             break;
     }
@@ -2151,14 +2152,6 @@ FloatPixel sample_image_pixel_float_offset(
                          lowRight[2], lowRight[3]);
             }
 
-            bool printMe = false;
-            if (x1 <= 0 || x2 <= 0 || x1 >= (int)width - 1
-                || x2 >= (int)width - 1)
-                printMe = true;
-            if (y1 <= 0 || y2 <= 0 || y1 >= (int)height - 1
-                || y2 >= (int)height - 1)
-                printMe = true;
-
             double weights[2][2];
 
             weights[0][0] = weights[0][1] = 1.0 - frac(x - 0.5f);
@@ -3544,7 +3537,6 @@ void copy_image_data(image_descriptor *srcImageInfo,
     {
         size_t src_width_lod = 1 /*srcImageInfo->width*/;
         size_t src_height_lod = 1 /*srcImageInfo->height*/;
-        size_t src_depth_lod = 1 /*srcImageInfo->depth*/;
 
         switch (srcImageInfo->type)
         {
@@ -3579,10 +3571,6 @@ void copy_image_data(image_descriptor *srcImageInfo,
                 src_height_lod = (srcImageInfo->height >> src_lod)
                     ? (srcImageInfo->height >> src_lod)
                     : 1;
-                if (srcImageInfo->type == CL_MEM_OBJECT_IMAGE3D)
-                    src_depth_lod = (srcImageInfo->depth >> src_lod)
-                        ? (srcImageInfo->depth >> src_lod)
-                        : 1;
                 break;
         }
         src_mip_level_offset = compute_mip_level_offset(srcImageInfo, src_lod);
@@ -3595,7 +3583,6 @@ void copy_image_data(image_descriptor *srcImageInfo,
     {
         size_t dst_width_lod = 1 /*dstImageInfo->width*/;
         size_t dst_height_lod = 1 /*dstImageInfo->height*/;
-        size_t dst_depth_lod = 1 /*dstImageInfo->depth*/;
         switch (dstImageInfo->type)
         {
             case CL_MEM_OBJECT_IMAGE1D:
@@ -3629,10 +3616,6 @@ void copy_image_data(image_descriptor *srcImageInfo,
                 dst_height_lod = (dstImageInfo->height >> dst_lod)
                     ? (dstImageInfo->height >> dst_lod)
                     : 1;
-                if (dstImageInfo->type == CL_MEM_OBJECT_IMAGE3D)
-                    dst_depth_lod = (dstImageInfo->depth >> dst_lod)
-                        ? (dstImageInfo->depth >> dst_lod)
-                        : 1;
                 break;
         }
         dst_mip_level_offset = compute_mip_level_offset(dstImageInfo, dst_lod);
