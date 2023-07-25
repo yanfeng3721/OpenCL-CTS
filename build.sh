@@ -2,6 +2,8 @@
 
 set -e
 
+export CMAKE_VERSION=v_3_25_3
+
 os=$1
 build_type=$2
 jobs=$3
@@ -28,8 +30,8 @@ echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
 echo "Clone repositories"
 git clone https://github.com/KhronosGroup/OpenCL-Headers.git --depth 1
 git clone https://github.com/KhronosGroup/OpenCL-ICD-Loader.git --depth 1
-git clone https://github.com/KhronosGroup/Vulkan-Headers.git --depth 1
-git clone https://github.com/KhronosGroup/Vulkan-Loader.git --depth 1
+#git clone https://github.com/KhronosGroup/Vulkan-Headers.git --depth 1
+#git clone https://github.com/KhronosGroup/Vulkan-Loader.git --depth 1
 
 echo "Build ICD loader"
 pushd OpenCL-ICD-Loader
@@ -37,20 +39,20 @@ cmake cmake -G "Unix Makefiles" -DOPENCL_ICD_LOADER_HEADERS_DIR=../OpenCL-Header
 make -j ${jobs}
 popd
 
-echo "Build Vulkan-Loader"
-mkdir -p Vulkan-Loader/build
-pushd Vulkan-Loader/build
-python3 ../scripts/update_deps.py
-cmake .. -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE} \
-      -DBUILD_WSI_XLIB_SUPPORT=OFF \
-      -DBUILD_WSI_XCB_SUPPORT=OFF \
-      -DBUILD_WSI_WAYLAND_SUPPORT=OFF \
-      -DUSE_GAS=OFF \
-      -C helper.cmake ..
-cmake --build . -j2
-popd
+#echo "Build Vulkan-Loader"
+#mkdir -p Vulkan-Loader/build
+#pushd Vulkan-Loader/build
+#python3 ../scripts/update_deps.py
+#cmake .. -G Ninja \
+#      -DCMAKE_BUILD_TYPE=Release \
+#      -DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE} \
+#      -DBUILD_WSI_XLIB_SUPPORT=OFF \
+#      -DBUILD_WSI_XCB_SUPPORT=OFF \
+#      -DBUILD_WSI_WAYLAND_SUPPORT=OFF \
+#      -DUSE_GAS=OFF \
+#      -C helper.cmake ..
+#cmake --build . -j2
+#popd
 
 echo "Apply patch"
 git clone https://github.com/intel-innersource/drivers.gpu.validation.opencl-cts-patches.git
@@ -69,4 +71,4 @@ popd
 echo "Build done"
 rm -rf OpenCL-*
 rm -rf drivers*
-rm -rf Vulkan-*
+#rm -rf Vulkan-*
