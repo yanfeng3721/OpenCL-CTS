@@ -9,8 +9,9 @@ The OpenCL Conformance Tests
 
 ## 2 .Build on Win64
 ###    Using ICC compiler for 2022.1 release
-    ics ws -archive deploy_mainline efi2win 20211109_000000
-    ics set config -ws efi2win prod vs=2019 && wcontext
+    xarch get -p mainline -var efi2win -type win_qa_release -stamp 20221119_000000 -nocs
+    ics ws -archive deploy_mainline efi2win 20221119_000000
+    ics set config -ws efi2win qa_release vs=2022 && wcontext
 ###    Release build
     ./build.sh win release 24
 ###    Debug build
@@ -20,7 +21,7 @@ The OpenCL Conformance Tests
 ###    Using ICC compiler for 2022.1 release
     xarch get -p mainline -var efi2win -type win_qa_release -stamp 20221119_000000 -nocs
     ics ws -archive deploy_mainline efi2win 20221119_000000
-    ics set config -ws x86winefi2 prod vs=2019 && wcontext
+    ics set config -ws x86winefi2 qa_release vs=2022 && wcontext
 ###    Release build
     ./build.sh win release 24
 ###    Debug build
