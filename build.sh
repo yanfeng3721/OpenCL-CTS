@@ -28,8 +28,8 @@ fi
 echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
 
 echo "Clone repositories"
-git clone https://github.com/KhronosGroup/OpenCL-Headers.git --depth 1
-git clone https://github.com/KhronosGroup/OpenCL-ICD-Loader.git --depth 1
+git clone https://github.com/KhronosGroup/OpenCL-Headers.git -b v2023.04.17 --depth 1
+git clone https://github.com/KhronosGroup/OpenCL-ICD-Loader.git -b v2023.04.17 --depth 1
 #git clone https://github.com/KhronosGroup/Vulkan-Headers.git --depth 1
 #git clone https://github.com/KhronosGroup/Vulkan-Loader.git --depth 1
 
