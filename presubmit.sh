@@ -18,9 +18,6 @@ BUILD_VULKAN_TEST="ON"
 cmake --version
 echo
 
-cmake --version
-echo
-
 # Prepare toolchain if needed
 if [[ ${JOB_ARCHITECTURE} != "" && ${RUNNER_OS} != "Windows" ]]; then
     TOOLCHAIN_URL_VAR=TOOLCHAIN_URL_${JOB_ARCHITECTURE}
@@ -80,7 +77,6 @@ cmake .. -G Ninja \
       -DBUILD_WSI_XLIB_SUPPORT=OFF \
       -DBUILD_WSI_XCB_SUPPORT=OFF \
       -DBUILD_WSI_WAYLAND_SUPPORT=OFF \
-      -DUSE_GAS=OFF \
       -C helper.cmake ..
 cmake --build . -j2
 

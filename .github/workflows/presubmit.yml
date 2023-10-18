@@ -13,16 +13,24 @@ jobs:
       fail-fast: false
       matrix:
         mainmatrix: [true]
+<<<<<<< HEAD
         os: [ubuntu-20.04, macos-latest, windows-latest]
+=======
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+>>>>>>> v2023-10-10-00
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             mainmatrix: true
             gl: 1
             extra: " gl"
+<<<<<<< HEAD
           - os: ubuntu-20.04
+=======
+          - os: ubuntu-22.04
+>>>>>>> v2023-10-10-00
             mainmatrix: false
             arch: arm
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             mainmatrix: false
             arch: aarch64
             debug: 1
@@ -55,10 +63,14 @@ jobs:
         run: ./presubmit.sh
   formatcheck:
     name: Check code format
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Install packages
+<<<<<<< HEAD
         run: sudo apt install -y clang-format clang-format-9
+=======
+        run: sudo apt install -y clang-format clang-format-11
+>>>>>>> v2023-10-10-00
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
