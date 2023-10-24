@@ -23,6 +23,8 @@ if [ ${os} = win ]; then
     c_compiler="icl"
     cxx_compiler="icl"
     cmake_extra_params="-DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
+else
+    export PATH="/rdrive/ref/gcc/7.5.0/rhel80/efi2/bin":$PATH
 fi
 
 echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
