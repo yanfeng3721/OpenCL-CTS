@@ -8,8 +8,6 @@ os=$1
 build_type=$2
 jobs=$3
 cmake_extra_params="-DGL_IS_SUPPORTED=OFF"
-c_compiler="gcc"
-cxx_compiler="g++"
 
 if [ ${build_type} != "debug" ]; then
     build_type="Release"
@@ -24,7 +22,10 @@ if [ ${os} = win ]; then
     cxx_compiler="icl"
     cmake_extra_params="-DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
 else
-    export PATH="/rdrive/ref/gcc/7.5.0/rhel80/efi2/bin":$PATH
+    c_compiler="gcc"
+    cxx_compiler="g++"
+    # Uplift gcc to 7.5 after tag v2023 10 10 00
+    export PATH="/rdrive/ref/gcc/7.5.0/rhel70/efi2/bin":$PATH
 fi
 
 echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
