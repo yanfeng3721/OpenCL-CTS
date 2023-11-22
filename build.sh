@@ -25,7 +25,8 @@ else
     c_compiler="gcc"
     cxx_compiler="g++"
     # Uplift gcc to 7.5 after tag v2023 10 10 00
-    export PATH="/rdrive/ref/gcc/7.5.0/rhel70/efi2/bin":$PATH
+    export PATH="$PWD/spirv-tools":"/rdrive/ref/gcc/7.5.0/rhel70/efi2/bin":$PATH
+    echo $PATH
 fi
 
 echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
@@ -76,6 +77,16 @@ pushd Build
 cmake -G "Unix Makefiles" -DCL_INCLUDE_DIR=OpenCL-Headers -DCL_LIB_DIR=OpenCL-ICD-Loader -DCMAKE_C_COMPILER=${c_compiler} -DCMAKE_CXX_COMPILER=${cxx_compiler} -DCMAKE_BUILD_TYPE=${build_type} -DOPENCL_LIBRARIES=OpenCL -DVULKAN_INCLUDE_DIR=Vulkan-Headers/include/ -DVULKAN_LIB_DIR=Vulkan-Loader/build/loader/ ${cmake_extra_params} ..
 make -j ${jobs}
 popd
+
+# spirv-as from https://github.com/KhronosGroup/SPIRV-Tools/blob/main/docs/downloads.md
+# only generated on linux since spv file is OS unrelated
+if [ ${os} = linux ]; then
+  echo "Generate spirv bin"
+  pushd test_conformance/spirv_new
+  ./assemble_spirv.py
+  cp -r spirv_bin ../../Build/test_conformance/spirv_new/
+  popd
+fi
 
 echo "Build done"
 rm -rf OpenCL-*
