@@ -21,6 +21,10 @@ if [ ${os} = win ]; then
     c_compiler="icl"
     cxx_compiler="icl"
     cmake_extra_params="-DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
+elif [ ${os} = win32 ]; then
+    c_compiler="icl"
+    cxx_compiler="icl"
+    cmake_extra_params="-DCMAKE_TOOLCHAIN_FILE=Windows-icl-x86.cmake -DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
 else
     c_compiler="gcc"
     cxx_compiler="g++"
@@ -45,7 +49,7 @@ popd
 
 echo "Build ICD loader"
 pushd OpenCL-ICD-Loader
-cmake cmake -G "Unix Makefiles" -DOPENCL_ICD_LOADER_HEADERS_DIR=../OpenCL-Headers -DCMAKE_BUILD_TYPE=${build_type} .
+cmake -G "Unix Makefiles" -DOPENCL_ICD_LOADER_HEADERS_DIR=../OpenCL-Headers -DCMAKE_BUILD_TYPE=${build_type} .
 make -j ${jobs}
 popd
 

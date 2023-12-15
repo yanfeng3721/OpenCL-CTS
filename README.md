@@ -23,9 +23,9 @@ The OpenCL Conformance Tests
     ics ws -archive deploy_mainline-rel efi2win 20221119_000000
     ics set config -ws x86winefi2 qa_release vs=2022 && wcontext
 ###    Release build
-    ./build.sh win release 24
+    ./build.sh win32 release 24
 ###    Debug build
-    ./build.sh win debug 24
+    ./build.sh win32 debug 24
 
 # OpenCL Conformance Test Suite (CTS)
 
