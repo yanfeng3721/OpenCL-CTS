@@ -29,8 +29,7 @@ else
     c_compiler="gcc"
     cxx_compiler="g++"
     # Uplift gcc to 7.5 after tag v2023 10 10 00
-    export PATH="$PWD/spirv-tools":"/rdrive/ref/gcc/7.5.0/rhel70/efi2/bin":$PATH
-    echo $PATH
+    export PATH="/rdrive/ref/gcc/7.5.0/rhel70/efi2/bin":$PATH
 fi
 
 echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
@@ -83,9 +82,10 @@ make -j ${jobs}
 popd
 
 # spirv-as from https://github.com/KhronosGroup/SPIRV-Tools/blob/main/docs/downloads.md
-# only generated on linux since spv file is OS unrelated
-if [ ${os} = linux ]; then
+# only generated on Windows 64 bits since spv file is OS unrelated
+if [ ${os} = win ]; then
   echo "Generate spirv bin"
+  export PATH="$PWD/spirv-tools;$PATH"
   pushd test_conformance/spirv_new
   ./assemble_spirv.py
   cp -r spirv_bin ../../Build/test_conformance/spirv_new/
