@@ -1,0 +1,420 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 95f957f..a598752 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -167,8 +167,13 @@ if(MSVC)
+ endif()
+ 
+ if( WIN32 AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel" )
+-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
+-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
++    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "IntelLLVM")
++        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -fp:strict")
++        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -fp:strict")
++    else()
++        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
++        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
++    endif()
+ endif()
+ 
+ # To handle addresses larger than 2 gigabytes for 32bit targets
+diff --git a/test_common/harness/msvc9.c b/test_common/harness/msvc9.c
+index 29b45d6..4488479 100644
+--- a/test_common/harness/msvc9.c
++++ b/test_common/harness/msvc9.c
+@@ -714,6 +714,7 @@ int32_t float2int(float fx)
+     return u.i;
+ }
+ 
++#if !__has_builtin(__builtin_clz)
+ #if !defined(_WIN64)
+ /** Returns the number of leading 0-bits in x,
+     starting at the most significant bit position.
+@@ -778,6 +779,7 @@ int __builtin_clz(unsigned int pattern)
+ }
+ 
+ #endif // !defined(_WIN64)
++#endif // !__has_builtin(__builtin_clz)
+ 
+ #include <intrin.h>
+ #include <emmintrin.h>
+diff --git a/test_conformance/events/test_userevents.cpp b/test_conformance/events/test_userevents.cpp
+index 1fdb4ea..fc705a4 100644
+--- a/test_conformance/events/test_userevents.cpp
++++ b/test_conformance/events/test_userevents.cpp
+@@ -34,7 +34,7 @@
+         if ((cmd) != CL_SUCCESS)                                               \
+         {                                                                      \
+             log_error("CL ERROR: %s %u: ", __FILE__, __LINE__);                \
+-            log_error(##__VA_ARGS__);                                          \
++            log_error(__VA_ARGS__);                                          \
+             log_error("\n");                                                   \
+             return -1;                                                         \
+         }                                                                      \
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_create_context.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_create_context.cpp
+index 6033ce9..310c087 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_create_context.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_create_context.cpp
+@@ -24,7 +24,7 @@ int context_create(cl_device_id deviceID, cl_context context,
+     CResult result;
+ 
+     // create device
+-    std::auto_ptr<CDeviceWrapper> deviceWrapper;
++    std::unique_ptr<CDeviceWrapper> deviceWrapper;
+     if (!DeviceCreate(adapterType, deviceWrapper))
+     {
+         result.ResultSub(CResult::TEST_ERROR);
+@@ -68,7 +68,7 @@ int context_create(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectSharedHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surface;
++        std::unique_ptr<CSurfaceWrapper> surface;
+         if (!MediaSurfaceCreate(
+                 adapterType, width, height, surfaceFormat, *deviceWrapper,
+                 surface, (sharedHandle == SHARED_HANDLE_ENABLED) ? true : false,
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_api.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_api.cpp
+index 68db364..0f3fe4f 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_api.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_api.cpp
+@@ -27,7 +27,7 @@ int api_functions(cl_device_id deviceID, cl_context context,
+     CResult result;
+ 
+     // create device
+-    std::auto_ptr<CDeviceWrapper> deviceWrapper;
++    std::unique_ptr<CDeviceWrapper> deviceWrapper;
+     if (!DeviceCreate(adapterType, deviceWrapper))
+     {
+         result.ResultSub(CResult::TEST_ERROR);
+@@ -87,7 +87,7 @@ int api_functions(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectSharedHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surface;
++        std::unique_ptr<CSurfaceWrapper> surface;
+ 
+         // create surface
+         if (!MediaSurfaceCreate(
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_kernel.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_kernel.cpp
+index 8476122..b8c97f8 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_kernel.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_functions_kernel.cpp
+@@ -48,7 +48,7 @@ int kernel_functions(cl_device_id deviceID, cl_context context,
+ 
+     CResult result;
+ 
+-    std::auto_ptr<CDeviceWrapper> deviceWrapper;
++    std::unique_ptr<CDeviceWrapper> deviceWrapper;
+     if (!DeviceCreate(adapterType, deviceWrapper))
+     {
+         result.ResultSub(CResult::TEST_ERROR);
+@@ -102,7 +102,7 @@ int kernel_functions(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectSrcHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surfaceSrc;
++        std::unique_ptr<CSurfaceWrapper> surfaceSrc;
+         if (!MediaSurfaceCreate(adapterType, width, height, surfaceFormat,
+                                 *deviceWrapper, surfaceSrc,
+                                 (sharedHandle == SHARED_HANDLE_ENABLED) ? true
+@@ -116,7 +116,7 @@ int kernel_functions(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectDstHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surfaceDst;
++        std::unique_ptr<CSurfaceWrapper> surfaceDst;
+         if (!MediaSurfaceCreate(adapterType, width, height, surfaceFormat,
+                                 *deviceWrapper, surfaceDst,
+                                 (sharedHandle == SHARED_HANDLE_ENABLED) ? true
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_get_device_ids.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_get_device_ids.cpp
+index 613a602..e8f1193 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_get_device_ids.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_get_device_ids.cpp
+@@ -21,7 +21,7 @@ int get_device_ids(cl_device_id deviceID, cl_context context,
+ {
+     CResult result;
+ 
+-    std::auto_ptr<CDeviceWrapper> deviceWrapper;
++    std::unique_ptr<CDeviceWrapper> deviceWrapper;
+     if (!DeviceCreate(adapterType, deviceWrapper))
+     {
+         result.ResultSub(CResult::TEST_ERROR);
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_interop_sync.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_interop_sync.cpp
+index 280f47b..1147cc4 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_interop_sync.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_interop_sync.cpp
+@@ -26,7 +26,7 @@ int interop_user_sync(cl_device_id deviceID, cl_context context,
+     CResult result;
+ 
+     // create device
+-    std::auto_ptr<CDeviceWrapper> deviceWrapper;
++    std::unique_ptr<CDeviceWrapper> deviceWrapper;
+     if (!DeviceCreate(adapterType, deviceWrapper))
+     {
+         result.ResultSub(CResult::TEST_ERROR);
+@@ -72,7 +72,7 @@ int interop_user_sync(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectSharedHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surface;
++        std::unique_ptr<CSurfaceWrapper> surface;
+         if (!MediaSurfaceCreate(
+                 adapterType, width, height, surfaceFormat, *deviceWrapper,
+                 surface, (sharedHandle == SHARED_HANDLE_ENABLED) ? true : false,
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_memory_access.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_memory_access.cpp
+index c724242..2833dcf 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_memory_access.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_memory_access.cpp
+@@ -23,7 +23,7 @@ int memory_access(cl_device_id deviceID, cl_context context,
+ {
+     CResult result;
+ 
+-    std::auto_ptr<CDeviceWrapper> deviceWrapper;
++    std::unique_ptr<CDeviceWrapper> deviceWrapper;
+     // creates device
+     if (!DeviceCreate(adapterType, deviceWrapper))
+     {
+@@ -74,7 +74,7 @@ int memory_access(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectSharedHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surface;
++        std::unique_ptr<CSurfaceWrapper> surface;
+ 
+         // creates surface
+         if (!MediaSurfaceCreate(
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_other_data_types.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_other_data_types.cpp
+index 8ff7127..81807bc 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/test_other_data_types.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/test_other_data_types.cpp
+@@ -57,7 +57,7 @@ int other_data_types(cl_device_id deviceID, cl_context context,
+         return result.Result();
+     }
+ 
+-    std::auto_ptr<CDeviceWrapper> deviceWrapper;
++    std::unique_ptr<CDeviceWrapper> deviceWrapper;
+     if (!DeviceCreate(adapterType, deviceWrapper))
+     {
+         result.ResultSub(CResult::TEST_ERROR);
+@@ -158,7 +158,7 @@ int other_data_types(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectSrcHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surfaceSrc;
++        std::unique_ptr<CSurfaceWrapper> surfaceSrc;
+         if (!MediaSurfaceCreate(adapterType, width, height, surfaceFormat,
+                                 *deviceWrapper, surfaceSrc,
+                                 (sharedHandle == SHARED_HANDLE_ENABLED) ? true
+@@ -172,7 +172,7 @@ int other_data_types(cl_device_id deviceID, cl_context context,
+         }
+ 
+         void *objectDstHandle = 0;
+-        std::auto_ptr<CSurfaceWrapper> surfaceDst;
++        std::unique_ptr<CSurfaceWrapper> surfaceDst;
+         if (!MediaSurfaceCreate(adapterType, width, height, surfaceFormat,
+                                 *deviceWrapper, surfaceDst,
+                                 (sharedHandle == SHARED_HANDLE_ENABLED) ? true
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.cpp b/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.cpp
+index 87eb13c..3b0bf0a 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.cpp
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.cpp
+@@ -224,7 +224,7 @@ bool YUVGenerate(TSurfaceFormat surfaceFormat, std::vector<cl_uchar> &yuv,
+     return true;
+ }
+ 
+-bool YUVSurfaceSetNV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceSetNV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        const std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height)
+ {
+@@ -257,7 +257,7 @@ bool YUVSurfaceSetNV12(std::auto_ptr<CSurfaceWrapper> &surface,
+ #endif
+ }
+ 
+-bool YUVSurfaceSetYV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceSetYV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        const std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height)
+ {
+@@ -305,7 +305,7 @@ bool YUVSurfaceSetYV12(std::auto_ptr<CSurfaceWrapper> &surface,
+ }
+ 
+ bool YUVSurfaceSet(TSurfaceFormat surfaceFormat,
+-                   std::auto_ptr<CSurfaceWrapper> &surface,
++                   std::unique_ptr<CSurfaceWrapper> &surface,
+                    const std::vector<cl_uchar> &yuv, unsigned int width,
+                    unsigned int height)
+ {
+@@ -326,7 +326,7 @@ bool YUVSurfaceSet(TSurfaceFormat surfaceFormat,
+     return true;
+ }
+ 
+-bool YUVSurfaceGetNV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceGetNV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height)
+ {
+@@ -363,7 +363,7 @@ bool YUVSurfaceGetNV12(std::auto_ptr<CSurfaceWrapper> &surface,
+ #endif
+ }
+ 
+-bool YUVSurfaceGetYV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceGetYV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height)
+ {
+@@ -411,7 +411,7 @@ bool YUVSurfaceGetYV12(std::auto_ptr<CSurfaceWrapper> &surface,
+ }
+ 
+ bool YUVSurfaceGet(TSurfaceFormat surfaceFormat,
+-                   std::auto_ptr<CSurfaceWrapper> &surface,
++                   std::unique_ptr<CSurfaceWrapper> &surface,
+                    std::vector<cl_uchar> &yuv, unsigned int width,
+                    unsigned int height)
+ {
+@@ -1078,7 +1078,7 @@ bool GetImageInfo(cl_mem object, cl_image_format formatExp,
+ }
+ 
+ bool GetMemObjInfo(cl_mem object, cl_dx9_media_adapter_type_khr adapterType,
+-                   std::auto_ptr<CSurfaceWrapper> &surface,
++                   std::unique_ptr<CSurfaceWrapper> &surface,
+                    void *shareHandleExp)
+ {
+     bool result = true;
+@@ -1172,7 +1172,7 @@ bool GetMemObjInfo(cl_mem object, cl_dx9_media_adapter_type_khr adapterType,
+ bool ImageInfoVerify(cl_dx9_media_adapter_type_khr adapterType,
+                      const std::vector<cl_mem> &memObjList, unsigned int width,
+                      unsigned int height,
+-                     std::auto_ptr<CSurfaceWrapper> &surface,
++                     std::unique_ptr<CSurfaceWrapper> &surface,
+                      void *sharedHandle)
+ {
+     if (memObjList.size() != 2 && memObjList.size() != 3)
+@@ -1379,19 +1379,19 @@ D3DFORMAT SurfaceFormatToD3D(TSurfaceFormat surfaceFormat)
+ #endif
+ 
+ bool DeviceCreate(cl_dx9_media_adapter_type_khr adapterType,
+-                  std::auto_ptr<CDeviceWrapper> &device)
++                  std::unique_ptr<CDeviceWrapper> &device)
+ {
+     switch (adapterType)
+     {
+ #if defined(_WIN32)
+         case CL_ADAPTER_D3D9_KHR:
+-            device = std::auto_ptr<CDeviceWrapper>(new CD3D9Wrapper());
++            device = std::unique_ptr<CDeviceWrapper>(new CD3D9Wrapper());
+             break;
+         case CL_ADAPTER_D3D9EX_KHR:
+-            device = std::auto_ptr<CDeviceWrapper>(new CD3D9ExWrapper());
++            device = std::unique_ptr<CDeviceWrapper>(new CD3D9ExWrapper());
+             break;
+         case CL_ADAPTER_DXVA_KHR:
+-            device = std::auto_ptr<CDeviceWrapper>(new CDXVAWrapper());
++            device = std::unique_ptr<CDeviceWrapper>(new CDXVAWrapper());
+             break;
+ #endif
+         default:
+@@ -1551,7 +1551,7 @@ void SurfaceFormatToString(TSurfaceFormat surfaceFormat, std::string &str)
+ bool MediaSurfaceCreate(cl_dx9_media_adapter_type_khr adapterType,
+                         unsigned int width, unsigned int height,
+                         TSurfaceFormat surfaceFormat, CDeviceWrapper &device,
+-                        std::auto_ptr<CSurfaceWrapper> &surface,
++                        std::unique_ptr<CSurfaceWrapper> &surface,
+                         bool sharedHandle, void **objectSharedHandle)
+ {
+     switch (adapterType)
+@@ -1559,7 +1559,7 @@ bool MediaSurfaceCreate(cl_dx9_media_adapter_type_khr adapterType,
+ #if defined(_WIN32)
+         case CL_ADAPTER_D3D9_KHR: {
+             surface =
+-                std::auto_ptr<CD3D9SurfaceWrapper>(new CD3D9SurfaceWrapper);
++                std::unique_ptr<CD3D9SurfaceWrapper>(new CD3D9SurfaceWrapper);
+             CD3D9SurfaceWrapper *d3dSurface =
+                 static_cast<CD3D9SurfaceWrapper *>(surface.get());
+             HRESULT hr = 0;
+@@ -1578,7 +1578,7 @@ bool MediaSurfaceCreate(cl_dx9_media_adapter_type_khr adapterType,
+         break;
+         case CL_ADAPTER_D3D9EX_KHR: {
+             surface =
+-                std::auto_ptr<CD3D9SurfaceWrapper>(new CD3D9SurfaceWrapper);
++                std::unique_ptr<CD3D9SurfaceWrapper>(new CD3D9SurfaceWrapper);
+             CD3D9SurfaceWrapper *d3dSurface =
+                 static_cast<CD3D9SurfaceWrapper *>(surface.get());
+             HRESULT hr = 0;
+@@ -1598,7 +1598,7 @@ bool MediaSurfaceCreate(cl_dx9_media_adapter_type_khr adapterType,
+         break;
+         case CL_ADAPTER_DXVA_KHR: {
+             surface =
+-                std::auto_ptr<CD3D9SurfaceWrapper>(new CD3D9SurfaceWrapper);
++                std::unique_ptr<CD3D9SurfaceWrapper>(new CD3D9SurfaceWrapper);
+             CD3D9SurfaceWrapper *d3dSurface =
+                 static_cast<CD3D9SurfaceWrapper *>(surface.get());
+             HRESULT hr = 0;
+diff --git a/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.h b/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.h
+index 56c0fc2..9c18eaf 100644
+--- a/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.h
++++ b/test_conformance/extensions/cl_khr_dx9_media_sharing/utils.h
+@@ -116,24 +116,24 @@ void YUVGenerateYV12(std::vector<cl_uchar> &yuv, unsigned int width,
+ bool YUVGenerate(TSurfaceFormat surfaceFormat, std::vector<cl_uchar> &yuv,
+                  unsigned int width, unsigned int height, cl_uchar valueMin,
+                  cl_uchar valueMax, double valueAdd = 0.0);
+-bool YUVSurfaceSetNV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceSetNV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        const std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height);
+-bool YUVSurfaceSetYV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceSetYV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        const std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height);
+ bool YUVSurfaceSet(TSurfaceFormat surfaceFormat,
+-                   std::auto_ptr<CSurfaceWrapper> &surface,
++                   std::unique_ptr<CSurfaceWrapper> &surface,
+                    const std::vector<cl_uchar> &yuv, unsigned int width,
+                    unsigned int height);
+-bool YUVSurfaceGetNV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceGetNV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height);
+-bool YUVSurfaceGetYV12(std::auto_ptr<CSurfaceWrapper> &surface,
++bool YUVSurfaceGetYV12(std::unique_ptr<CSurfaceWrapper> &surface,
+                        std::vector<cl_uchar> &yuv, unsigned int width,
+                        unsigned int height);
+ bool YUVSurfaceGet(TSurfaceFormat surfaceFormat,
+-                   std::auto_ptr<CSurfaceWrapper> &surface,
++                   std::unique_ptr<CSurfaceWrapper> &surface,
+                    std::vector<cl_uchar> &yuv, unsigned int width,
+                    unsigned int height);
+ bool YUVCompareNV12(const std::vector<cl_uchar> &yuvTest,
+@@ -178,12 +178,12 @@ bool GetImageInfo(cl_mem object, cl_image_format formatExp,
+                   size_t slicePitchExp, size_t widthExp, size_t heightExp,
+                   size_t depthExp, unsigned int planeExp);
+ bool GetMemObjInfo(cl_mem object, cl_dx9_media_adapter_type_khr adapterType,
+-                   std::auto_ptr<CSurfaceWrapper> &surface,
++                   std::unique_ptr<CSurfaceWrapper> &surface,
+                    void *shareHandleExp);
+ bool ImageInfoVerify(cl_dx9_media_adapter_type_khr adapterType,
+                      const std::vector<cl_mem> &memObjList, unsigned int width,
+                      unsigned int height,
+-                     std::auto_ptr<CSurfaceWrapper> &surface,
++                     std::unique_ptr<CSurfaceWrapper> &surface,
+                      void *sharedHandle);
+ bool ImageFormatCheck(cl_context context, cl_mem_object_type imageType,
+                       const cl_image_format imageFormatCheck);
+@@ -195,7 +195,7 @@ D3DFORMAT SurfaceFormatToD3D(TSurfaceFormat surfaceFormat);
+ #endif
+ 
+ bool DeviceCreate(cl_dx9_media_adapter_type_khr adapterType,
+-                  std::auto_ptr<CDeviceWrapper> &device);
++                  std::unique_ptr<CDeviceWrapper> &device);
+ bool SurfaceFormatCheck(cl_dx9_media_adapter_type_khr adapterType,
+                         const CDeviceWrapper &device,
+                         TSurfaceFormat surfaceFormat);
+@@ -204,7 +204,7 @@ void SurfaceFormatToString(TSurfaceFormat surfaceFormat, std::string &str);
+ bool MediaSurfaceCreate(cl_dx9_media_adapter_type_khr adapterType,
+                         unsigned int width, unsigned int height,
+                         TSurfaceFormat surfaceFormat, CDeviceWrapper &device,
+-                        std::auto_ptr<CSurfaceWrapper> &surface,
++                        std::unique_ptr<CSurfaceWrapper> &surface,
+                         bool sharedHandle, void **objectSharedHandle);
+ 
+ cl_int

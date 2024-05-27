@@ -7,6 +7,12 @@ export CMAKE_VERSION=v_3_25_3
 os=$1
 build_type=$2
 jobs=$3
+if [ "$#" -ge 4 ]; then
+    compiler=$4
+else
+    compiler="icl"
+fi
+
 cmake_extra_params="-DGL_IS_SUPPORTED=OFF"
 
 if [ ${build_type} != "debug" ]; then
@@ -18,18 +24,23 @@ else
 fi
 
 if [ ${os} = win ]; then
-    c_compiler="icl"
-    cxx_compiler="icl"
+    c_compiler=${compiler}
+    cxx_compiler=${compiler}
     cmake_extra_params="-DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
 elif [ ${os} = win32 ]; then
-    c_compiler="icl"
-    cxx_compiler="icl"
-    cmake_extra_params="-DCMAKE_TOOLCHAIN_FILE=Windows-icl-x86.cmake -DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
+    c_compiler=${compiler}
+    cxx_compiler=${compiler}
+    cmake_extra_params="-DCMAKE_TOOLCHAIN_FILE=Windows-${compiler}-x86.cmake -DGL_IS_SUPPORTED=OFF -DCMAKE_C_FLAGS_RELEASE=${build_opt} -DCMAKE_CXX_FLAGS_RELEASE=${build_opt}"
 else
     c_compiler="gcc"
     cxx_compiler="g++"
     # Uplift gcc to 7.5 after tag v2023 10 10 00
     export PATH="/rdrive/ref/gcc/7.5.0/rhel70/efi2/bin":$PATH
+fi
+
+if [ ${c_compiler} = "icx-cl" ]; then
+    echo "Apply patch for building with icx-cl"
+    git apply win-build-with-icx-cl.patch
 fi
 
 echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
