@@ -59,8 +59,19 @@ popd
 
 echo "Build ICD loader"
 pushd OpenCL-ICD-Loader
-cmake -G "Unix Makefiles" -DOPENCL_ICD_LOADER_HEADERS_DIR=../OpenCL-Headers -DCMAKE_BUILD_TYPE=${build_type} .
-make -j ${jobs}
+if [ ${c_compiler} = "icx-cl" ]; then
+    platform="x64"
+    if [ ${os} = "win32" ]; then
+        platform="Win32"
+    fi
+    mkdir build
+    cmake -S . -B build -A ${platform} -DOPENCL_ICD_LOADER_HEADERS_DIR=../OpenCL-Headers
+    cmake --build build --config ${build_type}
+    mv build/${build_type}/* ./
+else
+    cmake -G "Unix Makefiles" -DOPENCL_ICD_LOADER_HEADERS_DIR=../OpenCL-Headers -DCMAKE_BUILD_TYPE=${build_type} .
+    make -j ${jobs}
+fi
 popd
 
 #echo "Build Vulkan-Loader"
