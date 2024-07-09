@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 95f957f..a598752 100644
+index 95f957f..127eef1 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -167,8 +167,13 @@ if(MSVC)
@@ -9,8 +9,8 @@ index 95f957f..a598752 100644
 -    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
 -    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
 +    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "IntelLLVM")
-+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -fp:strict")
-+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -fp:strict")
++        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -fp:strict")
++        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -fp:strict")
 +    else()
 +        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
 +        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qlong-double -Qpc80 /DWIN32 /D_WINDOWS /W3 /GR /EHsc -nologo -Od -D_CRT_NONSTDC_NO_WARNINGS -EHsc -Wall -Qdiag-disable:68,111,177,186,161,869,1028,2259,2553,181,239,265,1188 -fp:strict -fp:source")
@@ -418,3 +418,38 @@ index 56c0fc2..9c18eaf 100644
                          bool sharedHandle, void **objectSharedHandle);
  
  cl_int
+diff --git a/test_conformance/math_brute_force/reference_math.cpp b/test_conformance/math_brute_force/reference_math.cpp
+index afa072f..9b6c01d 100644
+--- a/test_conformance/math_brute_force/reference_math.cpp
++++ b/test_conformance/math_brute_force/reference_math.cpp
+@@ -3582,10 +3582,6 @@ long double reference_exp2l(long double z)
+ 
+ long double reference_expm1l(long double x)
+ {
+-#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+-    // unimplemented
+-    return x;
+-#else
+     if (reference_isnanl(x)) return x;
+ 
+     if (x > 710) return INFINITY;
+@@ -3597,7 +3593,6 @@ long double reference_expm1l(long double x)
+     if (reference_isinfl(y)) y = INFINITY;
+ 
+     return y;
+-#endif
+ }
+ 
+ long double reference_fmaxl(long double x, long double y)
+@@ -3667,10 +3662,7 @@ long double reference_log2l(long double x)
+ 
+ long double reference_log1pl(long double x)
+ {
+-#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+-    // unimplemented
+-    return x;
+-#elif defined(__PPC__)
++#if defined(__PPC__)
+     // log1pl on PPC inadvertantly returns NaN for very large values. Work
+     // around this limitation by returning logl for large values.
+     return ((x > (long double)(0x1.0p+1022)) ? logl(x) : log1pl(x));
