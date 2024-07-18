@@ -59,14 +59,6 @@ else(CL_INCLUDE_DIR AND CL_LIB_DIR)
     message(FATAL_ERROR "Either install OpenCL or pass -DCL_INCLUDE_DIR and -DCL_LIB_DIR")
 endif(CL_INCLUDE_DIR AND CL_LIB_DIR)
 
-# VULKAN_INCLUDE_DIR - path to dir with Vulkan headers
-if(VULKAN_INCLUDE_DIR AND VULKAN_LIB_DIR)
-    link_directories(${VULKAN_LIB_DIR})
-else(CL_INCLUDE_DIR AND CL_LIB_DIR)
-    message(STATUS "Vulkan hasn't been found!")
-    message(FATAL_ERROR "Either install Vulkan or pass -DCL_INCLUDE_DIR and -DCL_LIB_DIR")
-endif(VULKAN_INCLUDE_DIR AND VULKAN_LIB_DIR)
-
 # CLConform_GL_LIBRARIES_DIR - path to OpenGL libraries
 if(GL_IS_SUPPORTED AND CLConform_GL_LIBRARIES_DIR)
     link_directories(${CLConform_GL_LIBRARIES_DIR})
@@ -199,7 +191,6 @@ if(APPLE)
 endif(APPLE)
 
 include_directories(SYSTEM ${CL_INCLUDE_DIR})
-include_directories(SYSTEM ${VULKAN_INCLUDE_DIR})
 include_directories(${CLConform_SOURCE_DIR}/test_common/harness
                     ${CLConform_SOURCE_DIR}/test_common/gles
                     ${CLConform_SOURCE_DIR}/test_common/gl
