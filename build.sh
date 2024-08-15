@@ -48,11 +48,11 @@ echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
 echo "Clone repositories"
 git clone https://github.com/KhronosGroup/OpenCL-Headers.git
 pushd OpenCL-Headers
-git reset --hard 9ce9a722ba06ea87487cd08bd2001276e2aef8cd
+git reset --hard d79beab14769efdff4ff9106cdc47268575d6891
 popd
 git clone https://github.com/KhronosGroup/OpenCL-ICD-Loader.git
 pushd OpenCL-ICD-Loader
-git reset --hard 229410f86a8c8c9e0f86f195409e5481a2bae067
+git reset --hard 3d27d7ca04d29fabe608a2372ce693601bcc4e81
 popd
 #git clone https://github.com/KhronosGroup/Vulkan-Headers.git --depth 1
 #git clone https://github.com/KhronosGroup/Vulkan-Loader.git --depth 1

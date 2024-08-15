@@ -104,17 +104,12 @@ if(CMAKE_COMPILER_IS_GNUCC OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?Clang"
     if(NOT CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo|MinSizeRel")
         # Enable more warnings if not doing a release build.
         add_cxx_flag_if_supported(-Wall)
-        # Suppress warnings that currently trigger on the code base.
-        # This list should shrink over time when warnings are fixed.
-        add_cxx_flag_if_supported(-Wno-sometimes-uninitialized)
-        add_cxx_flag_if_supported(-Wno-sign-compare)
     endif()
     add_cxx_flag_if_supported(-Wno-narrowing)
     add_cxx_flag_if_supported(-Wno-format)
     add_cxx_flag_if_supported(-Wno-error=cpp) # Allow #warning directive
     add_cxx_flag_if_supported(-Wno-unknown-pragmas) # Issue #785
     add_cxx_flag_if_supported(-Wno-error=asm-operand-widths) # Issue #784
-    add_cxx_flag_if_supported(-Wno-error=stringop-overflow)
 
     # -msse -mfpmath=sse to force gcc to use sse for float math,
     # avoiding excess precision problems that cause tests like int2float

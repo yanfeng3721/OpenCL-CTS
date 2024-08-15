@@ -1,3 +1,32 @@
+# OpenCL-CTS
+The OpenCL Conformance Tests
+
+## 1 .Build on Linux
+###    Release build
+    ./build.sh linux release 12
+###    Debug build
+    ./build.sh linux debug 12
+
+## 2 .Build on Win64
+###    Using ICX compiler for 2024.2 release
+    xarch get -p xmain-rel -v xmainefi2win -t win_qa_release -s 20240602_160000
+    ics ws -archive deploy_xmain-rel xmainefi2win 20240602_160000
+    ics set config -ws xmainefi2win qa_release vs=2022 && wcontext
+###    Release build
+    ./build.sh win release 12 icx-cl
+###    Debug build
+    ./build.sh win debug 12 icx-cl
+
+## 3 .Build on Win32
+###    Using ICX compiler for 2024.2 release
+    xarch get -p xmain-rel -v efi2win -t win_qa_release -s 20240602_160000
+    ics ws -archive deploy_xmain-rel xmainefi2win 20240602_160000
+    ics set config -ws xmainx86winefi2 wrappers=true qa_release vs=2022 && wcontext
+###    Release build
+    ./build.sh win32 release 12 icx-cl
+###    Debug build
+    ./build.sh win32 debug 12 icx-cl
+
 # OpenCL Conformance Test Suite (CTS)
 
 This is the OpenCL CTS for all versions of the Khronos
