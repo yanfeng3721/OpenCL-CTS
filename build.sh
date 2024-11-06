@@ -38,11 +38,6 @@ else
     export PATH="/rdrive/ref/gcc/7.5.0/rhel70/efi2/bin":$PATH
 fi
 
-if [ ${c_compiler} = "icx-cl" ]; then
-    echo "Apply patch for building with icx-cl"
-    git apply win-build-with-icx-cl.patch
-fi
-
 echo "Build OpenCL-CTS on ${os} ${build_type} mode with compiler ${c_compiler}"
 
 echo "Clone repositories"
