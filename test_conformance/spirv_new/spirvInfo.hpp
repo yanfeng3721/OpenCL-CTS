@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017 The Khronos Group Inc.
+// Copyright (c) 2024 The Khronos Group Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,16 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef _testBase_h
-#define _testBase_h
+
+#pragma once
 
 #include "harness/compat.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 
-#include "procs.h"
+#include <string>
 
-#endif // _testBase_h
+extern bool gVersionSkip;
+
+static bool is_spirv_version_supported(cl_device_id deviceID,
+                                       const char* version)
+{
+    std::string ilVersions = get_device_il_version_string(deviceID);
+
+    if (gVersionSkip)
+    {
+        log_info("    Skipping version check for %s.\n", version);
+        return true;
+    }
+    else if (ilVersions.find(version) == std::string::npos)
+    {
+        return false;
+    }
+
+    return true;
+}

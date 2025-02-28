@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2022 The Khronos Group Inc.
+// Copyright (c) 2024 The Khronos Group Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,9 +32,12 @@
 
 const VulkanInstance& getVulkanInstance();
 const VulkanPhysicalDevice& getVulkanPhysicalDevice();
-const VulkanQueueFamily&
-getVulkanQueueFamily(uint32_t queueFlags = VULKAN_QUEUE_FLAG_GRAPHICS
-                         | VULKAN_QUEUE_FLAG_COMPUTE);
+const VulkanPhysicalDevice&
+getAssociatedVulkanPhysicalDevice(cl_device_id deviceId);
+const VulkanQueueFamily& getVulkanQueueFamily(
+    const VulkanPhysicalDevice& physicalDevice = getVulkanPhysicalDevice(),
+    uint32_t queueFlags = VULKAN_QUEUE_FLAG_GRAPHICS
+        | VULKAN_QUEUE_FLAG_COMPUTE);
 const VulkanMemoryType&
 getVulkanMemoryType(const VulkanDevice& device,
                     VulkanMemoryTypeProperty memoryTypeProperty);
@@ -72,5 +75,6 @@ operator<<(std::ostream& os,
            VulkanExternalSemaphoreHandleType externalSemaphoreHandleType);
 std::ostream& operator<<(std::ostream& os, VulkanFormat format);
 
-std::vector<char> readFile(const std::string& filename);
+std::vector<char> readFile(const std::string& filename,
+                           const std::string& startdir);
 #endif // _vulkan_utility_hpp_

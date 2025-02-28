@@ -310,7 +310,7 @@ static test_definition test_list[] = {
     ADD_TEST(half_sin),      ADD_TEST(half_sqrt),  ADD_TEST(half_tan),
     ADD_TEST(add),           ADD_TEST(subtract),   ADD_TEST(divide),
     ADD_TEST(divide_cr),     ADD_TEST(multiply),   ADD_TEST(assignment),
-    ADD_TEST(not),
+    ADD_TEST(not ),          ADD_TEST(erf),        ADD_TEST(erfc),
 };
 
 #undef ADD_TEST
@@ -379,6 +379,7 @@ static int ParseArgs(int argc, const char **argv)
     gTestNames.push_back("");
 
     int singleThreaded = 0;
+    int forcedWorkerThreads = 0;
 
     { // Extract the app name
         strncpy(appName, argv[0], MAXPATHLEN - 1);
@@ -429,6 +430,11 @@ static int ParseArgs(int argc, const char **argv)
                     case 'l': gSkipCorrectnessTesting ^= 1; break;
 
                     case 'm': singleThreaded ^= 1; break;
+
+                    case 't':
+                        forcedWorkerThreads = atoi(argv[++i]);
+                        vlog(" %d", forcedWorkerThreads);
+                        break;
 
                     case 'g': gHasHalf ^= 1; break;
 
@@ -540,7 +546,17 @@ static int ParseArgs(int argc, const char **argv)
              gWimpyReductionFactor);
     }
 
-    if (singleThreaded) SetThreadCount(1);
+    if (singleThreaded)
+    {
+        vlog("*** WARNING: Force 1 worker thread                      ***\n");
+        SetThreadCount(1);
+    }
+    else if (forcedWorkerThreads > 0)
+    {
+        vlog("*** WARNING: Force %d worker threads                    ***\n",
+             forcedWorkerThreads);
+        SetThreadCount(forcedWorkerThreads);
+    }
 
     return 0;
 }
@@ -1043,12 +1059,13 @@ int IsTininessDetectedBeforeRounding(void)
 {
     int error;
     const char *kernelSource =
-        R"(__kernel void IsTininessDetectedBeforeRounding( __global float *out )
+        R"(__kernel void IsTininessDetectedBeforeRounding( __global float *out, float a, float b )
         {
-           volatile float a = 0x1.000002p-126f;
-           volatile float b = 0x1.fffffcp-1f;
            out[0] = a * b; // product is 0x1.fffffffffff8p-127
         })";
+
+    float a = 0x1.000002p-126f;
+    float b = 0x1.fffffcp-1f;
 
     clProgramWrapper query;
     clKernelWrapper kernel;
@@ -1066,6 +1083,22 @@ int IsTininessDetectedBeforeRounding(void)
     if ((error =
              clSetKernelArg(kernel, 0, sizeof(gOutBuffer[gMinVectorSizeIndex]),
                             &gOutBuffer[gMinVectorSizeIndex])))
+    {
+        vlog_error("Error: Unable to set kernel arg to detect how tininess is "
+                   "detected  for the device. Err = %d",
+                   error);
+        return error;
+    }
+
+    if ((error = clSetKernelArg(kernel, 1, sizeof(a), &a)))
+    {
+        vlog_error("Error: Unable to set kernel arg to detect how tininess is "
+                   "detected  for the device. Err = %d",
+                   error);
+        return error;
+    }
+
+    if ((error = clSetKernelArg(kernel, 2, sizeof(b), &b)))
     {
         vlog_error("Error: Unable to set kernel arg to detect how tininess is "
                    "detected  for the device. Err = %d",
